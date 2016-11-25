@@ -25,7 +25,7 @@
 
 <h2>Checked in Chrome/Safari/Firefox</h2>
 
-<div contenteditable="true" class="text">Try to delete me&nbsp;<span contenteditable="false" class="unremovable">&nbsp;<span contenteditable="false" class="subs">UnRemovable</span></span>&nbsp;</div>
+<div contenteditable="true" class="text">Try to delete me <span contenteditable="false" class="unremovable">&nbsp;<span contenteditable="false" class="subs">UnRemovable</span></span>&nbsp;</div>
 
 <script>
 
@@ -40,38 +40,38 @@ function isNBSP(node, isLast) {
 }
 
 tt.addEventListener('input', function (e) {
-  var newText = tt.innerHTML;
-  var unremovables = tt.querySelectorAll('.unremovable');
-  var unremovable = unremovables[0];
+    var newText = tt.innerHTML;
+    var unremovables = tt.querySelectorAll('.unremovable');
+    var unremovable = unremovables[0];
 
-  // unremovable could lose it's attr while moving on next line with “Enter” keyword
-  unremovable && unremovable.setAttribute('contenteditable', 'false');
-  // we need &nbsp; before, because Chrome is jumping on one letter backwards with out it when we press “← ”
-  var hasNBSPAfter = unremovable && unremovable.nextSibling && isNBSP(unremovable.nextSibling);
-  // we need &nbsp; after, because of better focusing for element, to get on last column
-  var hasNBSPBefore = unremovable && unremovable.previousSibling && isNBSP(unremovable.previousSibling, true);
-  // unremovables could be copy-pasted so it must be only one
-  var onlyOne = unremovables.length === 1;
+    // unremovable could lose it's attr while moving on next line with “Enter” keyword
+    unremovable && unremovable.setAttribute('contenteditable', 'false');
+    // we need &nbsp; before, because Chrome is jumping on one letter backwards with out it when we press “← ”
+    var hasNBSPAfter = unremovable && unremovable.nextSibling && isNBSP(unremovable.nextSibling);
+    // we need &nbsp; after, because of better focusing for element, to get on last column
+    var hasNBSPBefore = unremovable && unremovable.previousSibling && isNBSP(unremovable.previousSibling, true);
+    // unremovables could be copy-pasted so it must be only one
+    var onlyOne = unremovables.length === 1;
 
-  if (hasNBSPAfter && hasNBSPBefore && onlyOne) {
-  	curText = newText;
-  } else {
-    var caretPos = getCaretPosition(tt);
-    tt.innerHTML = curText;
-    var resurectedUnremovable = tt.querySelector('.unremovable');
-    setCaretPosition(tt, caretPos, function validate(nodeToPosition, caretPos) {
-        if (resurectedUnremovable.contains(nodeToPosition)) {
-            nodeToPosition = resurectedUnremovable.nextSibling;
-        }
-        if (nodeToPosition.previousSibling === resurectedUnremovable) {
-            if (nodeToPosition.length === 1) {
+    if (hasNBSPAfter && hasNBSPBefore && onlyOne) {
+        curText = newText;
+    } else {
+        var caretPos = getCaretPosition(tt);
+        tt.innerHTML = curText;
+        var resurectedUnremovable = tt.querySelector('.unremovable');
+        setCaretPosition(tt, caretPos, function validate(nodeToPosition, caretPos) {
+            if (resurectedUnremovable.contains(nodeToPosition)) {
                 nodeToPosition = resurectedUnremovable.nextSibling;
             }
-        }
-        return { nodeToPosition: nodeToPosition, caretPos: caretPos };
-    });
-  }
-
+            if (nodeToPosition.previousSibling === resurectedUnremovable) {
+                caretPos = 1;
+                if (nodeToPosition.length === 1) {
+                    nodeToPosition = resurectedUnremovable.nextSibling;
+                }
+            }
+            return { nodeToPosition: nodeToPosition, caretPos: caretPos };
+        });
+    }
 });
 
 
