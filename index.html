@@ -1,0 +1,161 @@
+<body>
+<style>
+.text {
+  margin: 2em;
+  border: dotted;
+  padding: 15px;
+  height: 70px;
+  overflow-y: scroll;
+}
+
+.subs {
+  color: white;
+  background-color: rebeccapurple;
+  border-radius: 10px;
+  margin: 0 2px;
+  padding: 0 4px;
+}
+  
+.unremovable,
+.subs {
+    user-select: none;
+    -moz-user-select: none;
+}
+</style>
+
+<div contenteditable="true" class="text">New from&nbsp;<span contenteditable="false" class="unremovable">&nbsp;<span contenteditable="false" class="subs">subscription_title</span></span>&nbsp;</div>
+
+<script>
+
+var tt = document.querySelector('.text');
+var curText = tt.innerHTML;
+
+function isNBSP(node, isLast) {
+    var index = isLast && node.textContent.length - 1;
+    return node.textContent.charCodeAt(index) === 160 ||
+        // Firefox
+        node.textContent.charCodeAt(index) === 32;
+}
+
+tt.addEventListener('input', function (e) {
+  var newText = tt.innerHTML;
+  var unremovables = tt.querySelectorAll('.unremovable');
+  var unremovable = unremovables[0];
+
+  // unremovable could lose it's attr while moving on next line with “Enter” keyword
+  unremovable && unremovable.setAttribute('contenteditable', 'false');
+  // we need &nbsp; before, because Chrome is jumping on one letter backwards with out it when we press “← ”
+  var hasNBSPAfter = unremovable && unremovable.nextSibling && isNBSP(unremovable.nextSibling);
+  // we need &nbsp; after, because of better focusing for element, to get on last column
+  var hasNBSPBefore = unremovable && unremovable.previousSibling && isNBSP(unremovable.previousSibling, true);
+  // unremovables could be copy-pasted so it must be only one
+  var onlyOne = unremovables.length === 1;
+
+  if (hasNBSPAfter && hasNBSPBefore && onlyOne) {
+  	curText = newText;
+  } else {
+  	var caret = getCaretPosition(tt);
+  	tt.innerHTML = curText;
+    var resurectedUnremovable = tt.querySelector('.unremovable');
+    setCaretPosition(tt, caret, [resurectedUnremovable, resurectedUnremovable.nextSibling]);
+  }
+
+});
+
+
+/**
+ * Traverse node childNodes and execute fn on each of it
+ * to stop traversing return `Boolean(false)` from fn
+ * 
+ * @param {HTMLElement} node 
+ * @param {Function} fn
+ * @returns {Boolean}
+ */
+function traverseNodesTree(node, fn) {
+    var nodes = node.childNodes;
+    for (var i = 0; i < nodes.length; i++) {
+        var node = nodes[i];
+        if (fn(node) === false) {
+            return false;
+        }
+        if (traverseNodesTree(node, fn) === false) {
+            return false;
+        };
+    }
+    return true;
+}
+
+function getCaretPosition(node) {
+    var caretPos = 0;
+    var sel = document.getSelection();
+    if (sel.rangeCount) {
+        var range = sel.getRangeAt(0);
+        var container = range.commonAncestorContainer;
+
+        var tillNode = null;
+
+        // range endOffset could be offset of domElements not textOffset
+        // check https://www.w3.org/TR/DOM-Level-2-Traversal-Range/ranges.html#Level-2-Range-Position
+        if (container.nodeType === 1) {
+            tillNode = container.firstChild
+            for (var i = 0; i < range.endOffset - 1; i++) {
+                tillNode = tillNode.nextSibling || tillNode;
+            }
+        }
+
+        // we need to traverse tree because of possible nested elements
+        traverseNodesTree(node, function(node) {
+            if (node === tillNode) {
+                return false;
+            }
+            if (!tillNode && node === container) {
+                caretPos += range.endOffset;
+                return false;
+            }
+            if (node.nodeType === 3) {
+                caretPos += node.length;
+            }
+        });
+    }
+    return caretPos;
+}
+  
+function setCaretPosition(node, caretPos, notValidNodes) {
+    var sel = document.getSelection();
+    var range = document.createRange();
+    var nodeToPosition = null;
+
+    traverseNodesTree(node, function(node) {
+        if (node.nodeType === 3) {
+            nodeToPosition = node;
+            if (node.length < caretPos) {
+                caretPos -= node.length;
+            } else {
+                return false;
+            }
+        }
+    });
+
+    if (notValidNodes) {
+        notValidNodes.forEach(function(notValidToPositionNode) {
+            if (notValidToPositionNode.contains(nodeToPosition)) {
+                nodeToPosition = notValidToPositionNode.nextSibling;
+                caretPos = 0;
+            }
+        });
+    }
+
+    if (!nodeToPosition) {
+        nodeToPosition = node;
+        caretPos = node.childNodes.length;
+    }
+
+    range.setStart(nodeToPosition, caretPos);
+    range.setEnd(nodeToPosition, caretPos);
+
+    sel.removeAllRanges();
+    sel.addRange(range);
+}
+
+</script>
+</body>
