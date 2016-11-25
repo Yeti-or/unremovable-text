@@ -56,10 +56,20 @@ tt.addEventListener('input', function (e) {
   if (hasNBSPAfter && hasNBSPBefore && onlyOne) {
   	curText = newText;
   } else {
-  	var caret = getCaretPosition(tt);
-  	tt.innerHTML = curText;
+    var caretPos = getCaretPosition(tt);
+    tt.innerHTML = curText;
     var resurectedUnremovable = tt.querySelector('.unremovable');
-    setCaretPosition(tt, caret, [resurectedUnremovable, resurectedUnremovable.nextSibling]);
+    setCaretPosition(tt, caretPos, function validate(nodeToPosition, caretPos) {
+        if (resurectedUnremovable.contains(nodeToPosition)) {
+            nodeToPosition = resurectedUnremovable.nextSibling;
+        }
+        if (nodeToPosition.previousSibling === resurectedUnremovable) {
+            if (nodeToPosition.length === 1) {
+                nodeToPosition = resurectedUnremovable.nextSibling;
+            }
+        }
+        return { nodeToPosition: nodeToPosition, caretPos: caretPos };
+    });
   }
 
 });
@@ -122,7 +132,7 @@ function getCaretPosition(node) {
     return caretPos;
 }
   
-function setCaretPosition(node, caretPos, notValidNodes) {
+function setCaretPosition(node, caretPos, validateNode) {
     var sel = document.getSelection();
     var range = document.createRange();
     var nodeToPosition = null;
@@ -138,13 +148,10 @@ function setCaretPosition(node, caretPos, notValidNodes) {
         }
     });
 
-    if (notValidNodes) {
-        notValidNodes.forEach(function(notValidToPositionNode) {
-            if (notValidToPositionNode.contains(nodeToPosition)) {
-                nodeToPosition = notValidToPositionNode.nextSibling;
-                caretPos = 0;
-            }
-        });
+    if (validateNode) {
+        var validate = validateNode(nodeToPosition, caretPos);
+        caretPos = validate.caretPos;
+        nodeToPosition = validate.nodeToPosition;
     }
 
     if (!nodeToPosition) {
